@@ -233,7 +233,7 @@ useEffect(() => {
   return (
     <div className="app">
       <div className="app-header">
-        <h1>nDRIMS에서 하고싶은 무엇이든 물어보세요!</h1>
+        <h1>nDRIMS LAM</h1>
         <div className="user-info">
           <span>{userInfo?.name}님 환영합니다!</span>
           <button onClick={handleLogout} className="logout-button">
