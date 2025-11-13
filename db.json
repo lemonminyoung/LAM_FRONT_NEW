@@ -1,0 +1,11 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "student_id": "2022112456",
+      "password": "a1637528!",
+      "name": "테스트사용자",
+      "token": "mock-token-2022112456"
+    }
+  ]
+}
