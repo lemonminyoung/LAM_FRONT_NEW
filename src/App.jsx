@@ -71,33 +71,61 @@ function App() {
     };
     setMessages((prev) => [...prev, userMessage]);
 
+    // 로딩 메시지 ID
+    const loadingMessageId = Date.now() + 1;
+
+    // 로딩 단계 메시지들
+    const loadingSteps = [
+      `'${text}' 작업을 시작합니다...`,
+      "요청을 처리 중입니다...",
+      "AI 모델이 분석 중입니다...",
+      "액션을 생성하고 있습니다...",
+      "실행 웹에서 작업 준비 중...",
+      "nDRIMS 페이지에서 작업 실행 중...",
+    ];
+
+    let currentStep = 0;
+
+    // 첫 번째 로딩 메시지 즉시 표시
+    setMessages((prev) => [...prev, {
+      id: loadingMessageId,
+      content: loadingSteps[0],
+      sender: "bot",
+      timestamp: new Date().toISOString(),
+    }]);
+
+    // 3초마다 다음 로딩 메시지로 업데이트
+    const loadingInterval = setInterval(() => {
+      currentStep++;
+      if (currentStep < loadingSteps.length) {
+        setMessages((prev) =>
+          prev.map(m => m.id === loadingMessageId
+            ? { ...m, content: loadingSteps[currentStep] }
+            : m
+          )
+        );
+      } else {
+        // 마지막 단계에 도달하면 계속 유지
+        currentStep = loadingSteps.length - 1;
+      }
+    }, 3000);
+
+    // loadingInterval을 정리할 수 있도록 저장
+    window._currentLoadingInterval = loadingInterval;
+    window._currentLoadingMessageId = loadingMessageId;
+
     try {
       const response = await sendPromptApi(text);
       console.log("프롬프트 응답:", response);
-
-      const botMessage = {
-        id: Date.now() + 1,
-        content:
-          response.message ||
-          "프롬프트가 전달되었습니다. 잠시만 기다려주세요...",
-        sender: "bot",
-        timestamp: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, botMessage]);
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 2,
-          content: " 실행 중입니다... 잠시만 기다려주세요.",
-          sender: "system",
-          timestamp: new Date().toISOString(),
-        },
-      ]);
     } catch (err) {
       console.error("메시지 전송 오류:", err);
+
+      // 로딩 메시지 제거
+      clearInterval(window._currentLoadingInterval);
+      setMessages((prev) => prev.filter(m => m.id !== loadingMessageId));
+
       const errorMessage = {
-        id: Date.now() + 1,
+        id: Date.now() + 2,
         content: `오류: ${err.message}`,
         sender: "system",
         timestamp: new Date().toISOString(),
@@ -154,11 +182,22 @@ useEffect(() => {
 
       // 실행 완료 상태 감지
       if (loginState === "logged_in" && data.status === "completed") {
+        // 로딩 메시지 중단 및 제거
+        if (window._currentLoadingInterval) {
+          clearInterval(window._currentLoadingInterval);
+          window._currentLoadingInterval = null;
+        }
+        if (window._currentLoadingMessageId) {
+          setMessages((prev) => prev.filter(m => m.id !== window._currentLoadingMessageId));
+          window._currentLoadingMessageId = null;
+        }
+
+        // 결과 메시지 추가
         setMessages((prev) => [
           ...prev,
           {
             id: Date.now(),
-            content: ` 실행 완료: ${
+            content: `✓ 실행 완료: ${
               data.data.action_description || "작업이 성공적으로 끝났습니다."
             }`,
             sender: "bot",
@@ -166,11 +205,22 @@ useEffect(() => {
           },
         ]);
       } else if (data.status === "error") {
+        // 로딩 메시지 중단 및 제거
+        if (window._currentLoadingInterval) {
+          clearInterval(window._currentLoadingInterval);
+          window._currentLoadingInterval = null;
+        }
+        if (window._currentLoadingMessageId) {
+          setMessages((prev) => prev.filter(m => m.id !== window._currentLoadingMessageId));
+          window._currentLoadingMessageId = null;
+        }
+
+        // 오류 메시지 추가
         setMessages((prev) => [
           ...prev,
           {
             id: Date.now(),
-            content: ` 오류: ${data.message}`,
+            content: `✗ 오류: ${data.message}`,
             sender: "system",
             timestamp: new Date().toISOString(),
           },
