@@ -117,12 +117,32 @@ function App() {
     try {
       const response = await sendPromptApi(text);
       console.log("프롬프트 응답:", response);
+
+      // 로딩 메시지 제거
+      clearInterval(window._currentLoadingInterval);
+      window._currentLoadingInterval = null;
+      setMessages((prev) => prev.filter(m => m.id !== loadingMessageId));
+      window._currentLoadingMessageId = null;
+
+      // 검증 결과 즉시 표시 (폴링 불필요)
+      const resultMessage = {
+        id: Date.now() + 2,
+        content: response.success
+          ? `✓ 실행 완료: ${response.message}`
+          : `✗ 실패: ${response.message}`,
+        sender: "bot",
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, resultMessage]);
+
     } catch (err) {
       console.error("메시지 전송 오류:", err);
 
       // 로딩 메시지 제거
       clearInterval(window._currentLoadingInterval);
+      window._currentLoadingInterval = null;
       setMessages((prev) => prev.filter(m => m.id !== loadingMessageId));
+      window._currentLoadingMessageId = null;
 
       const errorMessage = {
         id: Date.now() + 2,
@@ -180,52 +200,7 @@ useEffect(() => {
         ]);
       }
 
-      // 실행 완료 상태 감지
-      if (loginState === "logged_in" && data.status === "completed") {
-        // 로딩 메시지 중단 및 제거
-        if (window._currentLoadingInterval) {
-          clearInterval(window._currentLoadingInterval);
-          window._currentLoadingInterval = null;
-        }
-        if (window._currentLoadingMessageId) {
-          setMessages((prev) => prev.filter(m => m.id !== window._currentLoadingMessageId));
-          window._currentLoadingMessageId = null;
-        }
-
-        // 결과 메시지 추가
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now(),
-            content: `✓ 실행 완료: ${
-              data.data.action_description || "작업이 성공적으로 끝났습니다."
-            }`,
-            sender: "bot",
-            timestamp: new Date().toISOString(),
-          },
-        ]);
-      } else if (data.status === "error") {
-        // 로딩 메시지 중단 및 제거
-        if (window._currentLoadingInterval) {
-          clearInterval(window._currentLoadingInterval);
-          window._currentLoadingInterval = null;
-        }
-        if (window._currentLoadingMessageId) {
-          setMessages((prev) => prev.filter(m => m.id !== window._currentLoadingMessageId));
-          window._currentLoadingMessageId = null;
-        }
-
-        // 오류 메시지 추가
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now(),
-            content: `✗ 오류: ${data.message}`,
-            sender: "system",
-            timestamp: new Date().toISOString(),
-          },
-        ]);
-      }
+      // 실행 완료는 /prompt 응답으로 처리 (폴링 불필요)
     } catch (e) {
       console.error("상태 폴링 실패:", e);
     }
