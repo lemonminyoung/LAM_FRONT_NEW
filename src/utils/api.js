@@ -59,11 +59,7 @@ export const sendPromptApi = async (text) => {
       throw new Error(data.detail || data.message || "메시지 전송에 실패했습니다.");
     }
 
-    if (!data.ok) {
-      throw new Error(data.message || "메시지 전송에 실패했습니다.");
-    }
-
-    // 백엔드 응답: { ok: true, prompt_text, message }
+    // 백엔드 응답: { success: bool, message: string }
     return data;
   } catch (err) {
     console.error("[sendPromptApi 오류]", err);
